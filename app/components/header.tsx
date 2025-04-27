@@ -1,13 +1,22 @@
-"use client"
+'use client';
 
-import Image from "next/image"
-import Link from "next/link"
-import { Search } from "lucide-react"
+import Image from 'next/image';
+import Link from 'next/link';
+import { Search } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { useState, useEffect } from 'react';
 
 export default function Header() {
+  const isAuth = useSelector((state: RootState) => state.auth.isAuthenticated);
+  const [isClientAuth, setIsClientAuth] = useState(isAuth); // Trạng thái tạm thời cho client
+  const cartItemCount = 3; // Ví dụ, số lượng trong giỏ hàng
+  useEffect(() => {
+    setIsClientAuth(isAuth);
+  }, [isAuth]);
+
   return (
     <>
-      {/* Top header */}
       <div className="bg-[#269300] text-white py-2">
         <div className="container mx-auto px-4 flex justify-between items-center">
           <div className="flex items-center">
@@ -30,7 +39,7 @@ export default function Header() {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/gio-hang" className="text-sm flex items-center hover:underline relative">
+            <Link href="/cart" className="text-sm flex items-center hover:underline relative">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-5 w-5 mr-1"
@@ -47,26 +56,42 @@ export default function Header() {
               </svg>
               Giỏ hàng
               <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                3
+                {cartItemCount}
               </span>
             </Link>
-            <Link href="/dang-nhap" className="text-sm font-medium flex items-center hover:text-[#269300] transition-colors">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-              Đăng nhập
-            </Link>
+            {isClientAuth === null ? (
+              // Placeholder trong khi trạng thái xác thực chưa được xác định
+              <span className="text-sm">Đang tải...</span>
+            ) : isClientAuth ? (
+              // Hiển thị nếu đã đăng nhập
+              <>
+                <Link href="/profile" className="text-sm font-medium flex items-center hover:text-[#269300] transition-colors">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 mr-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                  Hồ sơ
+                </Link>
+                <Link href="/logout" className="text-sm font-medium flex items-center hover:text-[#269300] transition-colors">
+                  Đăng xuất
+                </Link>
+              </>
+            ) : (
+              // Hiển thị nếu chưa đăng nhập
+              <Link href="/login" className="text-sm font-medium flex items-center hover:text-[#269300] transition-colors">
+                Đăng nhập
+              </Link>
+            )}
             <Link href="/admin" className="text-sm flex items-center hover:underline">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -106,7 +131,7 @@ export default function Header() {
         <div className="container mx-auto px-4">
           <div className="flex justify-center">
             <div className="relative w-full max-w-md">
-              <input type="text" placeholder="Tìm kiếm..." className="w-full py-2 px-4 rounded-md" />
+              <input type="text" placeholder="Tìm kiếm..." className="w-full py verbatim 2 px-4 rounded-md" />
               <button className="absolute right-2 top-1/2 transform -translate-y-1/2">
                 <Search className="h-5 w-5 text-gray-500" />
               </button>
@@ -122,13 +147,13 @@ export default function Header() {
             <Link href="/" className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-full">
               Home
             </Link>
-            <Link href="/san-pham" className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-full">
+            <Link href="/fruits" className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-full">
               Sản phẩm
             </Link>
             <Link href="#" className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-full">
               Thanh toán
             </Link>
-            <Link href="/tin-tuc" className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-full">
+            <Link href="/news" className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-full">
               Tin tức
             </Link>
             <Link href="#" className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-full">
@@ -144,6 +169,5 @@ export default function Header() {
         </div>
       </div>
     </>
-  )
+  );
 }
-

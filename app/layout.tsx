@@ -1,25 +1,31 @@
-import type React from "react"
-import type { Metadata } from "next"
-import "./globals.css"
+'use client';
+import type React from 'react';
+import './globals.css';
+import store from './store';
+import { Provider } from 'react-redux';
+import { useEffect } from 'react';
+import { checkAuthOnStart } from './store/slices/authSlice';
+import { useAppDispatch } from './store';
 
-export const metadata: Metadata = {
-  title: "Fuji Fruit - Cửa hàng trái cây nhập khẩu",
-  description: "Cửa hàng trái cây nhập khẩu chất lượng cao",
-    generator: 'v0.dev'
+// A Client Component to handle auth check
+function AuthChecker({ children }: { children: React.ReactNode }) {
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    dispatch(checkAuthOnStart());
+  }, [dispatch]);
+
+  return <>{children}</>;
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="vi">
-      <body>{children}</body>
+      <body>
+        <Provider store={store}>
+          <AuthChecker>{children}</AuthChecker>
+        </Provider>
+      </body>
     </html>
-  )
+  );
 }
-
-
-
-import './globals.css'
