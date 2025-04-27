@@ -25,7 +25,7 @@ import { useToast } from "../../../../components/ui/use-toast";
 import ProductForm from "./ProductForm";
 import { Search } from "lucide-react";
 import { getFruits, deleteFruit, createFruit, updateFruit } from "../../api";
-import { Fruit, PaginatedFruits } from "../../types";
+import { Fruit, FruitPOST, PaginatedFruits } from "../../types";
 
 export default function ProductList() {
   const [paginatedFruits, setPaginatedFruits] =
@@ -64,7 +64,9 @@ export default function ProductList() {
     fetchFruits();
   }, [currentPage, searchTerm]);
 
-  const handleAddProduct = async (newProduct: Omit<Fruit, "id">) => {
+  const handleAddProduct = async (newProduct: FruitPOST) => {
+    console.log(newProduct);
+
     try {
       await createFruit(newProduct);
       toast({ title: "Thành công", description: "Thêm sản phẩm thành công" });
@@ -72,6 +74,8 @@ export default function ProductList() {
       setPaginatedFruits(data.data);
       setFormDialogOpen(false);
     } catch (err) {
+      console.log(err);
+
       toast({
         title: "Lỗi",
         description: "Thêm sản phẩm thất bại",
@@ -127,7 +131,14 @@ export default function ProductList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Danh sách sản phẩm</h2>
-        <Button onClick={() => setFormDialogOpen(true)}>Thêm sản phẩm</Button>
+        <Button
+          onClick={() => {
+            setEditingProduct(null);
+            setFormDialogOpen(true);
+          }}
+        >
+          Thêm sản phẩm
+        </Button>
       </div>
 
       <div className="flex items-center space-x-2 mb-4">
@@ -153,6 +164,12 @@ export default function ProductList() {
               <TableHead className="px-6 py-3 text-left">Tên</TableHead>
               <TableHead className="px-6 py-3 text-left">Giá</TableHead>
               <TableHead className="px-6 py-3 text-left">Tồn kho</TableHead>
+              {/* Xóa dòng Mô tả */}
+              <TableHead className="px-6 py-3 text-left">Danh mục</TableHead>
+              <TableHead className="px-6 py-3 text-left">Tags</TableHead>
+              <TableHead className="px-6 py-3 text-left">Ngày nhập</TableHead>
+              <TableHead className="px-6 py-3 text-left">Xuất xứ</TableHead>
+              {/* Xóa các dòng Trạng thái, Đánh giá, Giảm giá */}
               <TableHead className="px-6 py-3 text-center">Hành động</TableHead>
             </TableRow>
           </TableHeader>
@@ -161,7 +178,7 @@ export default function ProductList() {
               <TableRow key={product.id} className="hover:bg-gray-50">
                 <TableCell className="px-6 py-4">
                   <img
-                    src={product.image}
+                    src={`http://192.168.0.107:8080${product.image}`}
                     alt={product.name}
                     className="w-12 h-12 object-cover rounded"
                   />
@@ -173,6 +190,19 @@ export default function ProductList() {
                 <TableCell className="px-6 py-4 text-center">
                   {product.quantity}
                 </TableCell>
+                {/* Xóa cell Mô tả */}
+                <TableCell className="px-6 py-4">
+                  {product.categories
+                    .map((category) => category.name)
+                    .join(", ")}
+                </TableCell>
+                <TableCell className="px-6 py-4">
+                  {product.tags.join(", ")}
+                </TableCell>
+                <TableCell className="px-6 py-4">
+                  {product.importDate}
+                </TableCell>
+                <TableCell className="px-6 py-4">{product.origin}</TableCell>
                 <TableCell className="px-6 py-4 text-center space-x-2">
                   <Button
                     variant="outline"

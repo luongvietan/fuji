@@ -7,10 +7,12 @@ import { Input } from "../../../../components/ui/input";
 import { Textarea } from "../../../../components/ui/textarea";
 import { Badge } from "../../../../components/ui/badge";
 import { useToast } from "../../../../components/ui/use-toast";
-import { Fruit } from "../../types";
+import { Fruit, Category, FruitPOST } from "../../types";
+import { set } from "date-fns";
+import { getCategoriesPaginated } from "../../api";
 
 interface ProductFormProps {
-  onAddProduct: (product: Omit<Fruit, "id">) => void;
+  onAddProduct: (product: FruitPOST) => void;
   onUpdateProduct: (product: Fruit) => void;
   editingProduct: Fruit | null;
   setEditingProduct: (product: Fruit | null) => void;
@@ -29,6 +31,15 @@ export default function ProductForm({
   const [image, setImage] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
+  const [origin, setOrigin] = useState("");
+  const [weight, setWeight] = useState("");
+  const [stockStatus, setStockStatus] = useState("IN_STOCK");
+  const [discount, setDiscount] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
+  const [importDate, setImportDate] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -39,10 +50,30 @@ export default function ProductForm({
       setDescription(editingProduct.description);
       setImage(editingProduct.image);
       setTags(editingProduct.tags || []);
+      setCategories(editingProduct.categories || []);
+      setImportDate(editingProduct.importDate);
+      setOrigin(editingProduct.origin);
+      setWeight(editingProduct.weight.toString());
+      setStockStatus(editingProduct.stockStatus);
+      setDiscount(editingProduct.discount.toString());
     } else {
       resetForm();
     }
   }, [editingProduct]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getCategoriesPaginated(0, 1000); // Fetch first 10 categories
+        console.log(data);
+
+        setCategories(data.data.content);
+      } catch (error) {
+        console.error("Failed to fetch categories", error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const resetForm = () => {
     setName("");
@@ -52,6 +83,12 @@ export default function ProductForm({
     setImage("");
     setTags([]);
     setNewTag("");
+    setSelectedCategory(null);
+    setImportDate("");
+    setOrigin("");
+    setWeight("");
+    setStockStatus("IN_STOCK");
+    setDiscount("");
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,17 +113,17 @@ export default function ProductForm({
   const removeTag = (tag: string) => {
     setTags(tags.filter((t) => t !== tag));
   };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !price || !quantity || !description || !image) {
-      toast({
-        title: "Lỗi",
-        description: "Vui lòng nhập đầy đủ thông tin",
-        variant: "destructive",
-      });
-      return;
-    }
+    console.log("lỗi");
+    // if (!name || !price || !quantity || !description ||  !importDate) {
+    //   toast({
+    //     title: "Lỗi",
+    //     description: "Vui lòng nhập đầy đủ thông tin",
+    //     variant: "destructive",
+    //   });
+    //   return;
+    // }
 
     const priceValue = parseFloat(price);
     const quantityValue = parseInt(quantity);
@@ -99,26 +136,34 @@ export default function ProductForm({
       });
       return;
     }
-
+    const categorylist = [];
+    categorylist.push(selectedCategory);
     const product = {
       name,
       price: priceValue,
       quantity: quantityValue,
       description,
-      image,
-      tags,
+      tags: tags || [""],
+      categories: categorylist || [],
+      importDate,
+      origin,
+      weight: parseFloat(weight) || 0,
+      stockStatus,
+      discount: parseFloat(discount) || 0,
     };
 
     if (editingProduct) {
-      onUpdateProduct({ ...product, id: editingProduct.id });
+      onUpdateProduct({ ...product, id: editingProduct.id } as Fruit);
     } else {
-      onAddProduct(product);
+      onAddProduct(product as FruitPOST);
     }
     resetForm();
   };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      className="grid grid-cols-1 md:grid-cols-2 gap-1"
+    >
       <div>
         <label className="block text-sm font-medium">Tên sản phẩm</label>
         <Input
@@ -153,7 +198,7 @@ export default function ProductForm({
           placeholder="Mô tả sản phẩm"
         />
       </div>
-      <div>
+      {/* <div>
         <label className="block text-sm font-medium mb-1">Ảnh sản phẩm</label>
         <Input type="file" accept="image/*" onChange={handleImageChange} />
         {image && (
@@ -165,7 +210,7 @@ export default function ProductForm({
             />
           </div>
         )}
-      </div>
+      </div> */}
       <div>
         <label className="block text-sm font-medium">Tags</label>
         <div className="flex space-x-2 mt-1">
@@ -197,7 +242,72 @@ export default function ProductForm({
           ))}
         </div>
       </div>
-      <div className="flex space-x-2 justify-end">
+      <div>
+        <label className="block text-sm font-medium">Xuất xứ</label>
+        <Input
+          value={origin}
+          onChange={(e) => setOrigin(e.target.value)}
+          placeholder="Xuất xứ"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium">Khối lượng (kg)</label>
+        <Input
+          type="number"
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+          placeholder="Khối lượng"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium">Trạng thái kho</label>
+        <select
+          value={stockStatus}
+          onChange={(e) => setStockStatus(e.target.value)}
+          className="form-select"
+        >
+          <option value="IN_STOCK">Còn hàng</option>
+          <option value="OUT_OF_STOCK">Hết hàng</option>
+          <option value="LOW_STOCK">Sắp hết hàng</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium">Giảm giá (%)</label>
+        <Input
+          type="number"
+          value={discount}
+          onChange={(e) => setDiscount(e.target.value)}
+          placeholder="Giảm giá"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium">Ngày nhập</label>
+        <Input
+          type="date"
+          value={importDate}
+          onChange={(e) => setImportDate(e.target.value)}
+          placeholder="Ngày nhập"
+          max={new Date().toISOString().split("T")[0]} // Set max to today's date
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium">Danh mục</label>
+        <select
+          onChange={(e) => {
+            const selectedCategory = categories.find(
+              (category) => category.name === e.target.value
+            );
+            setSelectedCategory(selectedCategory || null);
+          }}
+        >
+          {categories.map((category) => (
+            <option key={category.id} value={category.name}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex space-x-4 justify-end">
         <Button type="submit">{editingProduct ? "Cập nhật" : "Thêm"}</Button>
         {editingProduct && (
           <Button
