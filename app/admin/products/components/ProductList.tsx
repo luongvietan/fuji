@@ -1,4 +1,3 @@
-// ProductList.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -24,7 +23,13 @@ import {
 import { useToast } from "../../../../components/ui/use-toast";
 import ProductForm from "./ProductForm";
 import { Search } from "lucide-react";
-import { getFruits, deleteFruit, createFruit, updateFruit } from "../../api";
+import {
+  getFruitsPaginated,
+  deleteFruit,
+  createFruit,
+  updateFruit,
+  searchFruits,
+} from "../../api";
 import { Fruit, FruitPOST, PaginatedFruits } from "../../types";
 
 export default function ProductList() {
@@ -32,10 +37,11 @@ export default function ProductList() {
     useState<PaginatedFruits | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(5);
-  const [sort] = useState("id,asc");
+  const [currentPage, setCurrentPage] = useState(0);
+  const pageSize = 5;
   const [searchTerm, setSearchTerm] = useState("");
+  const [triggerSearch, setTriggerSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(""); // Thêm trạng thái để lưu từ khóa tìm kiếm cuối cùng
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Fruit | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -44,38 +50,62 @@ export default function ProductList() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchFruits = async () => {
-      setLoading(true);
-      try {
-        const data = await getFruits();
-        setPaginatedFruits(data.data);
-        setError(null);
-      } catch (err) {
-        setError("Không thể tải danh sách sản phẩm");
-        toast({
-          title: "Lỗi",
-          description: "Không thể tải danh sách sản phẩm",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchFruits();
-  }, [currentPage, searchTerm]);
+    if (triggerSearch && searchQuery.trim()) {
+      fetchSearchResults();
+    } else {
+      fetchFruits();
+    }
+  }, [currentPage, triggerSearch, searchQuery]); // Thay searchTerm bằng searchQuery
+
+  const fetchFruits = async () => {
+    setLoading(true);
+    try {
+      const data = await getFruitsPaginated(currentPage, pageSize);
+      console.log("Dữ liệu gán vào paginatedFruits:", data.data); // Debug
+      setPaginatedFruits(data.data);
+      setError(null);
+    } catch (err) {
+      setError("Không thể tải danh sách sản phẩm");
+      toast({
+        title: "Lỗi",
+        description: "Không thể tải danh sách sản phẩm",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSearchResults = async () => {
+    setLoading(true);
+    try {
+      console.log("Gọi API tìm kiếm với từ khóa:", searchQuery); // Debug
+      const data = await searchFruits(searchQuery, currentPage, pageSize);
+      console.log("Dữ liệu gán vào paginatedFruits (tìm kiếm):", data.data); // Debug
+      setPaginatedFruits(data.data);
+      setError(null);
+    } catch (err) {
+      setError("Không thể tìm kiếm sản phẩm");
+      toast({
+        title: "Lỗi",
+        description: "Không thể tìm kiếm sản phẩm",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddProduct = async (newProduct: FruitPOST) => {
-    console.log(newProduct);
-
     try {
       await createFruit(newProduct);
-      toast({ title: "Thành công", description: "Thêm sản phẩm thành công" });
-      const data = await getFruits();
-      setPaginatedFruits(data.data);
+      if (triggerSearch && searchQuery.trim()) {
+        fetchSearchResults();
+      } else {
+        fetchFruits();
+      }
       setFormDialogOpen(false);
     } catch (err) {
-      console.log(err);
-
       toast({
         title: "Lỗi",
         description: "Thêm sản phẩm thất bại",
@@ -91,8 +121,11 @@ export default function ProductList() {
         title: "Thành công",
         description: "Cập nhật sản phẩm thành công",
       });
-      const data = await getFruits();
-      setPaginatedFruits(data.data);
+      if (triggerSearch && searchQuery.trim()) {
+        fetchSearchResults();
+      } else {
+        fetchFruits();
+      }
       setEditingProduct(null);
       setFormDialogOpen(false);
     } catch (err) {
@@ -108,8 +141,11 @@ export default function ProductList() {
     try {
       await deleteFruit(id);
       toast({ title: "Thành công", description: "Xóa sản phẩm thành công" });
-      const data = await getFruits();
-      setPaginatedFruits(data.data);
+      if (triggerSearch && searchQuery.trim()) {
+        fetchSearchResults();
+      } else {
+        fetchFruits();
+      }
     } catch (err) {
       toast({
         title: "Lỗi",
@@ -122,15 +158,33 @@ export default function ProductList() {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchTerm.trim()) {
+      setCurrentPage(0); // Reset về trang đầu
+      setSearchQuery(searchTerm); // Cập nhật từ khóa tìm kiếm
+      setTriggerSearch(true); // Kích hoạt tìm kiếm
+    }
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    if (!e.target.value.trim()) {
+      setTriggerSearch(false); // Tắt tìm kiếm nếu ô trống
+      setSearchQuery(""); // Xóa từ khóa tìm kiếm
+      setCurrentPage(0); // Reset trang
+    }
+  };
+
   if (loading) return <p>Đang tải...</p>;
   if (error) return <p>{error}</p>;
-
-  const totalPages = paginatedFruits?.totalPages || 1;
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Danh sách sản phẩm</h2>
         <Button
           onClick={() => {
             setEditingProduct(null);
@@ -147,12 +201,13 @@ export default function ProductList() {
           <Input
             placeholder="Tìm sản phẩm..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
+            onKeyDown={handleSearch}
             className="pl-8"
           />
         </div>
         <Badge variant="outline" className="px-3 py-1">
-          Tổng: {paginatedFruits?.totalElements || 0} sản phẩm
+          Tổng: {paginatedFruits?.totalElements} sản phẩm
         </Badge>
       </div>
 
@@ -160,86 +215,85 @@ export default function ProductList() {
         <Table className="w-full">
           <TableHeader>
             <TableRow>
-              <TableHead className="px-6 py-3 text-left">Ảnh</TableHead>
-              <TableHead className="px-6 py-3 text-left">Tên</TableHead>
-              <TableHead className="px-6 py-3 text-left">Giá</TableHead>
-              <TableHead className="px-6 py-3 text-left">Tồn kho</TableHead>
-              {/* Xóa dòng Mô tả */}
-              <TableHead className="px-6 py-3 text-left">Danh mục</TableHead>
-              <TableHead className="px-6 py-3 text-left">Tags</TableHead>
-              <TableHead className="px-6 py-3 text-left">Ngày nhập</TableHead>
-              <TableHead className="px-6 py-3 text-left">Xuất xứ</TableHead>
-              {/* Xóa các dòng Trạng thái, Đánh giá, Giảm giá */}
-              <TableHead className="px-6 py-3 text-center">Hành động</TableHead>
+              <TableHead>Ảnh</TableHead>
+              <TableHead>Tên</TableHead>
+              <TableHead>Giá</TableHead>
+              <TableHead>Tồn kho</TableHead>
+              <TableHead>Danh mục</TableHead>
+              <TableHead>Tags</TableHead>
+              <TableHead>Ngày nhập</TableHead>
+              <TableHead>Xuất xứ</TableHead>
+              <TableHead className="text-center">Hành động</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedFruits?.content.map((product) => (
-              <TableRow key={product.id} className="hover:bg-gray-50">
-                <TableCell className="px-6 py-4">
-                  <img
-                    src={`http://192.168.0.107:8080${product.image}`}
-                    alt={product.name}
-                    className="w-12 h-12 object-cover rounded"
-                  />
-                </TableCell>
-                <TableCell className="px-6 py-4">{product.name}</TableCell>
-                <TableCell className="px-6 py-4">
-                  {product.price.toLocaleString()} VND
-                </TableCell>
-                <TableCell className="px-6 py-4 text-center">
-                  {product.quantity}
-                </TableCell>
-                {/* Xóa cell Mô tả */}
-                <TableCell className="px-6 py-4">
-                  {product.categories
-                    .map((category) => category.name)
-                    .join(", ")}
-                </TableCell>
-                <TableCell className="px-6 py-4">
-                  {product.tags.join(", ")}
-                </TableCell>
-                <TableCell className="px-6 py-4">
-                  {product.importDate}
-                </TableCell>
-                <TableCell className="px-6 py-4">{product.origin}</TableCell>
-                <TableCell className="px-6 py-4 text-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEditingProduct(product);
-                      setFormDialogOpen(true);
-                    }}
-                  >
-                    Sửa
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      setProductToDelete(product.id);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    Xóa
-                  </Button>
+            {paginatedFruits?.content && paginatedFruits.content.length > 0 ? (
+              paginatedFruits.content.map((product) => (
+                <TableRow key={product.id} className="hover:bg-gray-50">
+                  <TableCell>
+                    <img
+                      src={`http://192.168.0.107:8080${product.image}`}
+                      alt={product.name}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                  </TableCell>
+                  <TableCell>{product.name}</TableCell>
+                  <TableCell>{product.price.toLocaleString()} VND</TableCell>
+                  <TableCell className="text-center">
+                    {product.quantity}
+                  </TableCell>
+                  <TableCell>
+                    {product.categories
+                      .map((category) => category.name)
+                      .join(", ")}
+                  </TableCell>
+                  <TableCell>{product.tags.join(", ")}</TableCell>
+                  <TableCell>{product.importDate}</TableCell>
+                  <TableCell>{product.origin}</TableCell>
+                  <TableCell className="text-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingProduct(product);
+                        setFormDialogOpen(true);
+                      }}
+                    >
+                      Sửa
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        setProductToDelete(product.id);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      Xóa
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center">
+                  Không tìm thấy sản phẩm
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </div>
 
       <div className="flex justify-center space-x-2">
-        {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((page) => (
+        {Array.from({ length: paginatedFruits?.totalPages || 1 }, (_, idx) => (
           <Button
-            key={page}
-            variant={page === currentPage ? "default" : "outline"}
+            key={idx}
+            variant={idx === currentPage ? "default" : "outline"}
             size="sm"
-            onClick={() => setCurrentPage(page)}
+            onClick={() => handlePageChange(idx)}
           >
-            {page}
+            {idx === 0 ? "1" : idx + 1} {/* Display 1 instead of 0 */}
           </Button>
         ))}
       </div>

@@ -27,13 +27,13 @@ export interface FruitPOST {
   price: number;
   quantity: number;
   description: string;
+  image: string;
   categories: Category[];
   tags: string[];
   importDate: string;
   origin: string;
   weight: number;
   stockStatus: string;
-  averageRating: number;
   discount: number;
 }
 
