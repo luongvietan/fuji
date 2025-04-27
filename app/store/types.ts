@@ -27,10 +27,19 @@ export interface Profile {
     cart: CartItem[];
     orders: Order[];
   }
+  export interface VerifyState {
+    status: "success"; 
+    message: string;  
+    data: {
+      username: string;
+      roles: string[];
+    };
+  }
+  
   
   // Định nghĩa kiểu cho Auth State
   export interface AuthState {
-    user: User | null;
+    role: string | null;
     isAuthenticated: boolean;
     loading: boolean;
     error: string | null;

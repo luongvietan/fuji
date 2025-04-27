@@ -3,17 +3,24 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Search } from 'lucide-react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { useState, useEffect } from 'react';
+import { logout } from '../store/slices/authSlice';
 
 export default function Header() {
   const isAuth = useSelector((state: RootState) => state.auth.isAuthenticated);
-  const [isClientAuth, setIsClientAuth] = useState(isAuth); // Trạng thái tạm thời cho client
-  const cartItemCount = 3; // Ví dụ, số lượng trong giỏ hàng
+  const [isClientAuth, setIsClientAuth] = useState(isAuth); 
+  const cartItemCount = 3;
+  const dispatch = useDispatch()
+
   useEffect(() => {
     setIsClientAuth(isAuth);
   }, [isAuth]);
+  const handleLogout = () => {
+    dispatch(logout())
+  }
+
 
   return (
     <>
@@ -60,7 +67,6 @@ export default function Header() {
               </span>
             </Link>
             {isClientAuth === null ? (
-              // Placeholder trong khi trạng thái xác thực chưa được xác định
               <span className="text-sm">Đang tải...</span>
             ) : isClientAuth ? (
               // Hiển thị nếu đã đăng nhập
@@ -82,7 +88,7 @@ export default function Header() {
                   </svg>
                   Hồ sơ
                 </Link>
-                <Link href="/logout" className="text-sm font-medium flex items-center hover:text-[#269300] transition-colors">
+                <Link onClick={handleLogout} href="/login"  className="text-sm font-medium flex items-center hover:text-[#269300] transition-colors">
                   Đăng xuất
                 </Link>
               </>
