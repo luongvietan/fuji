@@ -232,7 +232,7 @@ export default function ProductList() {
                 <TableRow key={product.id} className="hover:bg-gray-50">
                   <TableCell>
                     <img
-                      src={`http://192.168.0.107:8080${product.image}`}
+                      src={`${process.env.API_URL}/${product.image}`}
                       alt={product.name}
                       className="w-12 h-12 object-cover rounded"
                     />

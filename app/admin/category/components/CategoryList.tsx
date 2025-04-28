@@ -43,17 +43,19 @@ export default function CategoryList() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(0); // Add currentPage state
+  const pageSize = 5; // Set page size to match ProductList
 
   const { toast } = useToast();
 
   useEffect(() => {
     fetchCategories();
-  }, [triggerSearch, searchQuery]);
+  }, [currentPage, triggerSearch, searchQuery]);
 
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const data = await getCategoriesPaginated(0, 1000); // Fetch all categories
+      const data = await getCategoriesPaginated(currentPage, pageSize); // Use pagination
       let filteredContent = data.data.content;
       if (triggerSearch && searchQuery.trim()) {
         filteredContent = data.data.content.filter((category: Category) =>
@@ -133,6 +135,7 @@ export default function CategoryList() {
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && searchTerm.trim()) {
+      setCurrentPage(0); // Reset to first page on search
       setSearchQuery(searchTerm);
       setTriggerSearch(true);
     }
@@ -143,7 +146,12 @@ export default function CategoryList() {
     if (!e.target.value.trim()) {
       setTriggerSearch(false);
       setSearchQuery("");
+      setCurrentPage(0); // Reset to first page when clearing search
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   if (loading) return <p>Đang tải...</p>;
@@ -174,7 +182,7 @@ export default function CategoryList() {
           />
         </div>
         <Badge variant="outline" className="px-3 py-1">
-          Tổng: {paginatedCategories?.content.length || 0} danh mục
+          Tổng: {paginatedCategories?.totalElements || 0} danh mục
         </Badge>
       </div>
 
@@ -227,6 +235,23 @@ export default function CategoryList() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex justify-center space-x-2">
+        {Array.from(
+          { length: paginatedCategories?.totalPages || 1 },
+          (_, idx) => (
+            <Button
+              key={idx}
+              variant={idx === currentPage ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePageChange(idx)}
+            >
+              {idx === 0 ? "1" : idx + 1}
+            </Button>
+          )
+        )}
       </div>
 
       <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
