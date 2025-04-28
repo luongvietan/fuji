@@ -133,7 +133,7 @@ const CartPage: React.FC = () => {
               )}
 
               <div className="p-4 bg-gray-50 flex justify-between">
-                <Link href="/products" className="text-[#269300] hover:underline flex items-center">
+                <Link href="/fruits" className="text-[#269300] hover:underline flex items-center">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-4 w-4 mr-1"

@@ -23,6 +23,7 @@ interface CartState {
   cart: Cart | null;
   loading: boolean;
   error: string | null;
+  cartLength: number;
 }
 interface UpdateResponse {
   fruitID: number;
@@ -37,10 +38,8 @@ const getAuthToken = (): string => {
   const token = Cookies.get('token');
   return token || '';
 };
-
-// Async thunk để thêm sản phẩm vào giỏ hàng
 export const addToCart = createAsyncThunk<
-  Cart,
+  UpdateResponse,
   { fruitId: number; quantity: number, fruitName: string, fruitCategory: Category[], fruitPrice: number, image: string },
   { rejectValue: string }
 >('cart/addToCart', async ({ fruitId, quantity, fruitName, fruitPrice, image }, { rejectWithValue }) => {
@@ -55,7 +54,12 @@ export const addToCart = createAsyncThunk<
         Authorization: `Bearer ${token}`,
       },
     });
-    return response.data.data;
+    const newItem = {
+      ...response.data.data,
+      fruitID: fruitId
+    };
+
+    return newItem;
   } catch (error: any) {
     return rejectWithValue(error.response?.data?.message || 'Lỗi khi thêm vào giỏ hàng');
   }
@@ -76,6 +80,7 @@ export const fetchCart = createAsyncThunk<Cart, void, { rejectValue: string }>(
           Authorization: `Bearer ${token}`,
         },
       });
+
       return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy giỏ hàng');
@@ -97,17 +102,17 @@ export const plusCartItem = createAsyncThunk<UpdateResponse, number, { rejectVal
           Authorization: `Bearer ${token}`,
         },
       });
-      
+
       const newItem = {
-        ...response.data.data,  
-        fruitID: fruitId      
+        ...response.data.data,
+        fruitID: fruitId
       };
-      
+
       return newItem;
-      
+
     } catch (error: any) {
       console.log(error);
-      
+
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi tăng số lượng ');
     }
   }
@@ -128,10 +133,10 @@ export const minusCartItem = createAsyncThunk<UpdateResponse, number, { rejectVa
         },
       });
       const newItem = {
-        ...response.data.data,  
-        fruitID: fruitId      
+        ...response.data.data,
+        fruitID: fruitId
       };
-      
+
       return newItem;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi giảm số lượng');
@@ -154,10 +159,10 @@ export const removeCartItem = createAsyncThunk<UpdateResponse, number, { rejectV
         },
       });
       const newItem = {
-        ...response.data.data,  
-        fruitID: fruitId      
+        ...response.data.data,
+        fruitID: fruitId
       };
-      
+
       return newItem;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Lỗi khi xóa sản phẩm');
@@ -211,7 +216,13 @@ const cartSlice = createSlice({
       })
       .addCase(addToCart.fulfilled, (state, action) => {
         state.loading = false;
-        state.cart = action.payload;
+        // state.cart = action.payload;
+        if (state.cart?.items.some(item => item.fruitId === action.payload.fruitID)) {
+          state.cartLength = state.cart.items.length;
+        }else {
+          state.cartLength += 1;
+        }
+
       })
       .addCase(addToCart.rejected, (state, action) => {
         state.loading = false;
@@ -227,6 +238,7 @@ const cartSlice = createSlice({
       .addCase(fetchCart.fulfilled, (state, action) => {
         state.loading = false;
         state.cart = action.payload;
+        state.cartLength = action.payload.items.length;
       })
       .addCase(fetchCart.rejected, (state, action) => {
         state.loading = false;
@@ -242,7 +254,7 @@ const cartSlice = createSlice({
       .addCase(plusCartItem.fulfilled, (state, action) => {
         state.loading = false;
         console.log(action.payload);
-        
+
         state.cart?.items.forEach((item) => {
           if (item.fruitId === action.payload.fruitID) {
             item.quantity += 1;
@@ -255,7 +267,6 @@ const cartSlice = createSlice({
         state.error = action.payload || 'Unknown error';
       });
 
-    // Xử lý minusCartItem
     builder
       .addCase(minusCartItem.pending, (state) => {
         state.loading = true;
@@ -273,8 +284,6 @@ const cartSlice = createSlice({
         state.loading = false;
         state.error = action.payload || 'Unknown error';
       });
-
-    // Xử lý removeCartItem
     builder
       .addCase(removeCartItem.pending, (state) => {
         state.loading = true;
@@ -282,14 +291,20 @@ const cartSlice = createSlice({
       })
       .addCase(removeCartItem.fulfilled, (state, action) => {
         state.loading = false;
-        // state.cart?.items = state.cart?.items.filter((item) => item.fruitId !== action.payload.fruitID);
+        console.log(action.payload);
+
+        if (state.cart) {
+          state.cart.items = state.cart.items.filter((item) => item.fruitId !== action.payload.fruitID);
+        }
+        console.log(state.cart?.items);
+        state.cartLength = state.cart?.items.length || 0;
+
       })
       .addCase(removeCartItem.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || 'Unknown error';
       });
 
-    // Xử lý checkoutCart
     builder
       .addCase(checkoutCart.pending, (state) => {
         state.loading = true;
