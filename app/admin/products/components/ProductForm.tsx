@@ -8,6 +8,10 @@ import { Badge } from "../../../../components/ui/badge";
 import { useToast } from "../../../../components/ui/use-toast";
 import { Fruit, Category, FruitPOST } from "../../types";
 import { getCategoriesPaginated, uploadFruitImage } from "../../api";
+import { format } from "date-fns";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css"; // nhớ import CSS
+import { parseISO } from "date-fns"; // để parse ISO string
 
 interface ProductFormProps {
   onAddProduct: (product: FruitPOST) => void;
@@ -98,7 +102,7 @@ export default function ProductForm({
     setFile(selected);
     setPreviewUrl(URL.createObjectURL(selected));
 
-    console.log("Ảnh được chọn:", selected);
+    // console.log("Ảnh được chọn:", selected);
   };
 
   const addTag = () => {
@@ -254,7 +258,7 @@ export default function ProductForm({
       let imageUploadPromise = Promise.resolve(image);
       if (file) {
         imageUploadPromise = uploadFruitImage(file).then((result) => {
-          console.log("Kết quả upload ảnh:", result);
+          // console.log("Kết quả upload ảnh:", result);
           if (!result?.path) {
             throw new Error("Upload ảnh thất bại, không có đường dẫn trả về");
           }
@@ -282,7 +286,7 @@ export default function ProductForm({
         discount: discountValue,
       };
 
-      console.log("Dữ liệu sản phẩm gửi lên server:", product);
+      // console.log("Dữ liệu sản phẩm gửi lên server:", product);
 
       if (editingProduct) {
         await onUpdateProduct({ ...product, id: editingProduct.id } as Fruit);
@@ -391,7 +395,7 @@ export default function ProductForm({
             <Badge
               key={tag}
               variant="secondary"
-              className="rounded-full cursor-pointer"
+              className="bg-green-500 text-white rounded-full cursor-pointer"
               onClick={() => removeTag(tag)}
             >
               {tag} <span className="ml-1">×</span>
@@ -450,12 +454,19 @@ export default function ProductForm({
       </div>
       <div>
         <label className="block text-sm font-medium">Ngày nhập *</label>
-        <Input
-          type="date"
-          value={importDate}
-          onChange={(e) => setImportDate(e.target.value)}
-          placeholder="Ngày nhập"
-          max={new Date().toISOString().split("T")[0]}
+        <DatePicker
+          selected={importDate ? parseISO(importDate) : null}
+          onChange={(date: Date | null) => {
+            if (date) {
+              setImportDate(date.toISOString());
+            } else {
+              setImportDate("");
+            }
+          }}
+          dateFormat="dd/MM/yyyy"
+          placeholderText="Ngày/Tháng/Năm"
+          className="w-full p-2 border rounded" // dùng cùng style với input
+          maxDate={new Date()}
           required
         />
       </div>

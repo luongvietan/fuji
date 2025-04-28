@@ -1,24 +1,16 @@
-// types.ts
-export interface Category {
-  id: number;
-  name: string;
-  description: string;
-}
-
 export interface Fruit {
   id: number;
   name: string;
   price: number;
   quantity: number;
-  image: string;
   description: string;
-  categories: Category[];
+  image: string;
   tags: string[];
+  categories: Category[];
   importDate: string;
   origin: string;
   weight: number;
   stockStatus: string;
-  averageRating: number;
   discount: number;
 }
 
@@ -28,8 +20,8 @@ export interface FruitPOST {
   quantity: number;
   description: string;
   image: string;
-  categories: Category[];
   tags: string[];
+  categories: Category[];
   importDate: string;
   origin: string;
   weight: number;
@@ -37,31 +29,24 @@ export interface FruitPOST {
   discount: number;
 }
 
+export interface Category {
+  id: number;
+  name: string;
+  description?: string;
+}
+
 export interface PaginatedFruits {
   content: Fruit[];
-  pageable: {
-    pageNumber: number;
-    pageSize: number;
-    sort: {
-      empty: boolean;
-      unsorted: boolean;
-      sorted: boolean;
-    };
-    offset: number;
-    unpaged: boolean;
-    paged: boolean;
-  };
   totalElements: number;
   totalPages: number;
-  last: boolean;
-  size: number;
   number: number;
-  sort: {
-    empty: boolean;
-    unsorted: boolean;
-    sorted: boolean;
-  };
-  first: boolean;
-  numberOfElements: number;
-  empty: boolean;
+  size: number;
+}
+
+export interface PaginatedCategories {
+  content: Category[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
 }
