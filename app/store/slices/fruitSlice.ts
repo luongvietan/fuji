@@ -58,7 +58,7 @@ interface FruitResponse {
 }
 
 interface FruitState {
- fruits: Fruit[];
+  fruits: Fruit[];
   selectedFruit: Fruit | null;
   pagination: {
     pageNumber: number;
@@ -68,6 +68,7 @@ interface FruitState {
     last: boolean;
     first: boolean;
   };
+  relatedFruits: Fruit[];
   loading: boolean;
   error: string | null;
 }
@@ -125,17 +126,16 @@ export const searchFruitsByName = createAsyncThunk<
   }
 );
 
-// Async thunk để lấy danh sách hoa quả theo danh mục
 export const fetchFruitsByCategory = createAsyncThunk<
   FruitResponse,
-  { categoryName: string; page?: number; size?: number },
+  { categoryName: string },
   { rejectValue: string }
 >(
   'fruit/fetchFruitsByCategory',
-  async ({ categoryName, page = 0, size = 10 }, { rejectWithValue }) => {
+  async ({ categoryName }, { rejectWithValue }) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/category/${encodeURIComponent(categoryName)}`, {
-        params: { page, size },
+        params: { page: 0, size: 10 },
       });
       return response.data.data;
     } catch (error: any) {
@@ -143,12 +143,25 @@ export const fetchFruitsByCategory = createAsyncThunk<
     }
   }
 );
+export const fetchRelatedFruits = createAsyncThunk(
+  'fruit/fetchRelatedFruits',
+  async ({ fruitId, page = 0, size = 4 }: { fruitId: number; page?: number; size?: number } , { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/fruits/${fruitId}/related?page=${page}&size=${size}`
+      );
+      return response.data.data;
+    }catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
 
-// Tạo fruitSlice
 const fruitSlice = createSlice({
   name: 'fruit',
   initialState: {
     fruits: [],
+    relatedFruits: [],
     selectedFruit: null,
     pagination: {
       pageNumber: 0,
@@ -233,13 +246,13 @@ const fruitSlice = createSlice({
 
     // Xử lý fetchFruitsByCategory
     builder
-      .addCase(fetchFruitsByCategory.pending, (state) => {
+      .addCase(fetchRelatedFruits.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchFruitsByCategory.fulfilled, (state, action) => {
+      .addCase(fetchRelatedFruits.fulfilled, (state, action) => {
         state.loading = false;
-        state.fruits = action.payload.content;
+        state.relatedFruits = action.payload.content;
         state.pagination = {
           pageNumber: action.payload.pageable.pageNumber,
           pageSize: action.payload.pageable.pageSize,
@@ -249,10 +262,10 @@ const fruitSlice = createSlice({
           first: action.payload.first,
         };
       })
-      .addCase(fetchFruitsByCategory.rejected, (state, action) => {
+      .addCase(fetchRelatedFruits.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Unknown error';
       });
+    
   },
 });
 

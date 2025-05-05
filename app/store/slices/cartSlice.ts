@@ -65,7 +65,6 @@ export const addToCart = createAsyncThunk<
   }
 });
 
-// Async thunk để lấy giỏ hàng
 export const fetchCart = createAsyncThunk<Cart, void, { rejectValue: string }>(
   'cart/fetchCart',
   async (_, { rejectWithValue }) => {
@@ -170,7 +169,6 @@ export const removeCartItem = createAsyncThunk<UpdateResponse, number, { rejectV
   }
 );
 
-// Async thunk để thanh toán giỏ hàng
 export const checkoutCart = createAsyncThunk<void, void, { rejectValue: string }>(
   'cart/checkoutCart',
   async (_, { rejectWithValue }) => {
@@ -191,7 +189,6 @@ export const checkoutCart = createAsyncThunk<void, void, { rejectValue: string }
   }
 );
 
-// Tạo cartSlice
 const cartSlice = createSlice({
   name: 'cart',
   initialState: {
@@ -208,7 +205,6 @@ const cartSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Xử lý addToCart
     builder
       .addCase(addToCart.pending, (state) => {
         state.loading = true;
@@ -216,7 +212,6 @@ const cartSlice = createSlice({
       })
       .addCase(addToCart.fulfilled, (state, action) => {
         state.loading = false;
-        // state.cart = action.payload;
         if (state.cart?.items.some(item => item.fruitId === action.payload.fruitID)) {
           state.cartLength = state.cart.items.length;
         }else {
@@ -229,7 +224,6 @@ const cartSlice = createSlice({
         state.error = action.payload || 'Unknown error';
       });
 
-    // Xử lý fetchCart
     builder
       .addCase(fetchCart.pending, (state) => {
         state.loading = true;
@@ -245,7 +239,6 @@ const cartSlice = createSlice({
         state.error = action.payload || 'Unknown error';
       });
 
-    // Xử lý plusCartItem
     builder
       .addCase(plusCartItem.pending, (state) => {
         state.loading = true;
@@ -321,11 +314,7 @@ const cartSlice = createSlice({
   },
 });
 
-// Export actions
 export const { clearCart, clearError } = cartSlice.actions;
-
-// Export reducer
 export default cartSlice.reducer;
 
-// Export types
 export type { CartItem, Cart, CartState };

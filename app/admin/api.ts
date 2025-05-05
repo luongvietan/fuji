@@ -3,6 +3,7 @@ import axios from "axios";
 
 // Lấy danh sách hoa quả
 export async function getFruits() {
+  
   const res = await fetch(`${process.env.API_URL}/api/fruits`);
   if (!res.ok) {
     throw new Error("Failed to fetch fruits");
@@ -88,7 +89,7 @@ export async function updateFruit(id: number, product: Fruit) {
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
-
+    
     const res = await axios.put(
       `${process.env.API_URL}/api/fruits/${id}`,
       product,
@@ -185,11 +186,10 @@ export async function uploadFruitImage(file: File) {
     }
   } catch (error) {
     console.error("Lỗi khi upload ảnh:", error);
-    throw new Error(`Failed to upload image: ${error.message}`);
+    throw new Error(`Failed to upload image: ${error}`);
   }
 }
 
-// Lấy danh sách danh mục (phân trang)
 export async function getCategoriesPaginated(page: number, size: number) {
   try {
     const token = localStorage.getItem("token");
@@ -343,7 +343,6 @@ export async function deleteCategory(id: number) {
   }
 }
 
-// Fetch paginated fruits
 export async function getFruitsPaginated(page: number, size: number) {
   try {
     const token = localStorage.getItem("token");
@@ -354,7 +353,8 @@ export async function getFruitsPaginated(page: number, size: number) {
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
-
+    console.log(`${process.env.API_URL}/api/fruits?page=${page}&size=${size}`);
+    
     const res = await axios.get(
       `${process.env.API_URL}/api/fruits?page=${page}&size=${size}`,
       { headers }
