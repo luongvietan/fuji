@@ -11,7 +11,8 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const dispatch = useDispatch()
-  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth)
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth)
+
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)

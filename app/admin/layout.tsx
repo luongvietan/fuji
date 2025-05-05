@@ -1,40 +1,23 @@
+'use client';
 import type React from "react";
-import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { BaseURL } from "../utils/baseUrl";
-import axios from "axios";
+import { RootState } from "../store";
+import { useSelector } from "react-redux";
 
-export const metadata: Metadata = {
-  title: "Admin Dashboard - Fuji Fruit",
-  description: "Quản lý cửa hàng trái cây Fuji Fruit",
-};
 
-export default async function AdminLayout({
+
+export default  function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const token = (await cookies()).get("token")?.value;
-
-  if (!token) {
-    redirect("/login");
+  const { isAuthenticated ,role} = useSelector((state: RootState) => state.auth)
+  console.log(isAuthenticated);
+  console.log(role);
+  
+  
+  if (!isAuthenticated || role !== "ROLE_ADMIN") {
+    return <h1>Access Denied</h1>;
   }
-
-  try {
-    const res = await axios.get(`${BaseURL.auth}/verify`, {
-      headers: { Cookie: `token=${token}` },
-    });
-
-    const data = res.data;
-
-    if (res.status !== 200 || data.role !== "admin") {
-      redirect("/unauthorized");
-    }
-  } catch (error) {
-    console.error("Verification failed:", error);
-    redirect("/unauthorized");
-  }
-
   return <>{children}</>;
 }
