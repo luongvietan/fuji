@@ -1,115 +1,155 @@
-// store/authSlice.ts
-'use client'
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { AuthState, User, Credentials, AuthResponse } from "../types";
-import Cookies from "js-cookie";
-import axios from "axios";
-import { BaseURL } from "@/app/utils/baseUrl";
+'use client';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { AuthState, User, Credentials, AuthResponse, VerifyState } from '../types';
+import Cookies from 'js-cookie';
+import axios from 'axios';
+import { BaseURL } from '@/app/utils/baseUrl';
 
-export const login = createAsyncThunk<boolean, Credentials, { rejectValue: string }>(
-  "auth/login",
+// Thunk để đăng nhập
+export const login = createAsyncThunk<VerifyState, Credentials, { rejectValue: string }>(
+  'auth/login',
   async (credentials, { rejectWithValue }) => {
     try {
       const res = await axios.post(`${BaseURL.auth}/login`, {
         username: credentials.username,
         password: credentials.password,
       });
-      if (res.status !== 200) throw new Error("Đăng nhập thất bại");
+      if (res.status !== 200) throw new Error('Đăng nhập thất bại');
       const data: AuthResponse = await res.data.data;
       console.log(data);
 
-      Cookies.set("token", data.token, { secure: true, sameSite: "strict" });
-      return true;
+      Cookies.set('token', data.token, { secure: true, sameSite: 'strict' });
+      const resVerify = await axios.get(`${BaseURL.auth}/verify`, {
+        headers: { Authorization: `Bearer ${data.token}` },
+      });
+      if (resVerify.status !== 200) throw new Error('Token không hợp lệ');
+      return resVerify.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message || "Đăng nhập thất bại");
+      return rejectWithValue(error.response?.data?.message || error.message || 'Đăng nhập thất bại');
     }
   }
 );
 
-export const fetchUserData = createAsyncThunk<User, void, { rejectValue: string }>(
-  "auth/fetchUserData",
+// Thunk để lấy dữ liệu người dùng
+export const fetchUserData = createAsyncThunk<VerifyState, void, { rejectValue: string }>(
+  'auth/fetchUserData',
   async (_, { rejectWithValue }) => {
-    const token = Cookies.get("token");
-    if (!token) throw new Error("Chưa đăng nhập");
+    const token = Cookies.get('token');
+    if (!token) throw new Error('Chưa đăng nhập');
     try {
       const res = await axios.get(`${BaseURL.auth}/verify`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.status !== 200) throw new Error("Token không hợp lệ");
+      if (res.status !== 200) throw new Error('Token không hợp lệ');
       return await res.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message || "Lỗi khi tải dữ liệu người dùng");
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi tải dữ liệu người dùng');
     }
   }
 );
-export const checkAuthOnStart = createAsyncThunk<User | null, void, { rejectValue: string }>(
-  "auth/checkAuthOnStart",
+
+// Thunk để kiểm tra xác thực khi khởi động
+export const checkAuthOnStart = createAsyncThunk<VerifyState | null, void, { rejectValue: string }>(
+  'auth/checkAuthOnStart',
   async (_, { rejectWithValue }) => {
-    const token = Cookies.get("token");
+    const token = Cookies.get('token');
     if (!token) return null; // Nếu không có token thì trả về null
     try {
       const res = await axios.get(`${BaseURL.auth}/verify`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.status !== 200) throw new Error("Token không hợp lệ");
-      return res.data; // Trả về thông tin người dùng nếu token hợp lệ
+      if (res.status !== 200) throw new Error('Token không hợp lệ');
+      return res.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message || "Lỗi khi kiểm tra token");
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi kiểm tra token');
     }
   }
 );
+
+export const logoutAsync = createAsyncThunk<void, void, { rejectValue: string }>(
+  'auth/logoutAsync',
+  async (_, { rejectWithValue }) => {
+    const token = Cookies.get('token');
+    if (!token) return; // Nếu không có token, không cần gọi API
+    try {
+      
+      Cookies.remove('token');
+    } catch (error: any) {
+      Cookies.remove('token');
+      return rejectWithValue(error.response?.data?.message || error.message || 'Lỗi khi đăng xuất');
+    }
+  }
+);
+
 const initialState: AuthState = {
-  user: null,
+  role: null ,
   isAuthenticated: false,
   loading: false,
   error: null,
 };
 
 const authSlice = createSlice({
-  name: "auth",
+  name: 'auth',
   initialState,
   reducers: {
     logout: (state) => {
-      Cookies.remove("token");
-      state.user = null;
+      Cookies.remove('token');
+      state.role = null;
       state.isAuthenticated = false;
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(checkAuthOnStart.fulfilled, (state, action) => {
+        console.log(action.payload);
+        
         if (action.payload) {
-          state.user = action.payload;
+          state.role = action.payload.data.roles[0];
           state.isAuthenticated = true;
         } else {
-          state.user = null;
+          state.role = null;
           state.isAuthenticated = false;
         }
       })
       .addCase(checkAuthOnStart.rejected, (state, action) => {
-        state.user = null;
+        state.role = null;
         state.isAuthenticated = false;
-        state.error = action.payload ?? "Lỗi khi kiểm tra token";
+        state.error = action.payload ?? 'Lỗi khi kiểm tra token';
       })
       .addCase(login.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(login.fulfilled, (state, action) => {
+        state.role = action.payload.data.roles[0];
         state.isAuthenticated = true;
         state.loading = false;
       })
       .addCase(login.rejected, (state, action) => {
-        state.error = action.payload ?? "Lỗi không xác định";
+        state.error = action.payload ?? 'Lỗi không xác định';
         state.loading = false;
       })
       .addCase(fetchUserData.fulfilled, (state, action) => {
-        state.user = action.payload;
+        state.role = action.payload.data.roles[0];
         state.isAuthenticated = true;
       })
       .addCase(fetchUserData.rejected, (state) => {
-        state.user = null;
         state.isAuthenticated = false;
+      })
+      .addCase(logoutAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(logoutAsync.fulfilled, (state) => {
+        state.isAuthenticated = false;
+        state.loading = false;
+      })
+      .addCase(logoutAsync.rejected, (state, action) => {
+        // Vẫn đăng xuất cục bộ ngay cả khi API thất bại
+        state.isAuthenticated = false;
+        state.loading = false;
+        state.error = action.payload ?? 'Lỗi khi đăng xuất';
       });
   },
 });

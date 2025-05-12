@@ -1,120 +1,117 @@
-"use client"
+'use client';
 
-import Image from "next/image"
-import Link from "next/link"
-import { useState } from "react"
-import { Trash2, Plus, Minus } from "lucide-react"
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Trash2, Plus, Minus } from 'lucide-react';
+import {
+  fetchCart,
+  plusCartItem,
+  minusCartItem,
+  removeCartItem,
+  checkoutCart,
+  clearCart,
+  CartState,
+} from '@/app/store/slices/cartSlice';
+import { AppDispatch, RootState } from '@/app/store';
+import { BaseURL } from '@/app/utils/baseUrl';
 
-export default function CartPage() {
-  // Sử dụng dữ liệu tĩnh thay vì context để đơn giản hóa
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "Nho Xanh Sữa Hàn Quốc",
-      price: 250000,
-      quantity: 1,
-      image: "/products/nho-xanh.jpg",
-    },
-    {
-      id: 2,
-      name: "Táo hữu cơ Juliet",
-      price: 180000,
-      quantity: 1,
-      image: "/products/tao-juliet.jpg",
-    },
-    {
-      id: 3,
-      name: "Kiwi New Zealand",
-      price: 220000,
-      quantity: 1,
-      image: "/products/kiwi-gift.jpg",
-    },
-  ])
+const CartPage: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { cart, loading, error } = useSelector<RootState, CartState>((state) => state.cart);
 
-  // Hàm định dạng giá tiền
+  useEffect(() => {
+    dispatch(fetchCart());
+  }, [dispatch]);
+
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(price)
-  }
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(price);
+  };
+  const subtotal = cart?.items.reduce((total, item) => total + item.fruitPrice * item.quantity, 0) || 0;
+  const shipping = 30000;
+  const total = subtotal + shipping;
 
-  // Tính tổng tiền
-  const subtotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0)
-  const shipping = 30000
-  const total = subtotal + shipping
+  const handlePlusItem = (fruitId: number) => {
+    dispatch(plusCartItem(fruitId));
+  };
 
-  // Hàm xử lý cập nhật số lượng
-  const updateQuantity = (id: number, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      // Xóa sản phẩm nếu số lượng <= 0
-      setCartItems(cartItems.filter((item) => item.id !== id))
-    } else {
-      // Cập nhật số lượng
-      setCartItems(cartItems.map((item) => (item.id === id ? { ...item, quantity: newQuantity } : item)))
-    }
-  }
+  const handleMinusItem = (fruitId: number) => {
+    dispatch(minusCartItem(fruitId));
+  };
+  const handleRemoveItem = (fruitId: number) => {
+    dispatch(removeCartItem(fruitId));
+  };
 
-  // Hàm xóa sản phẩm
-  const removeItem = (id: number) => {
-    setCartItems(cartItems.filter((item) => item.id !== id))
-  }
+  const handleCheckout = () => {
+    dispatch(checkoutCart());
+  };
 
-  // Hàm xóa tất cả
-  const clearCart = () => {
-    setCartItems([])
-  }
+  const handleClearCart = () => {
+    dispatch(clearCart());
+    dispatch(fetchCart()); 
+  };
 
   return (
     <div className="py-8 bg-gray-50">
       <div className="container mx-auto px-4">
         <h1 className="text-2xl font-bold mb-6 text-[#269300]">Giỏ hàng của bạn</h1>
 
+        {loading && <div className="text-center py-8">Đang tải...</div>}
+        {error && <div className="text-center py-8 text-red-500">Lỗi: {error}</div>}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="p-4 border-b">
-                <h2 className="font-semibold">Sản phẩm ({cartItems.length})</h2>
+                <h2 className="font-semibold">Sản phẩm ({cart?.items.length || 0})</h2>
               </div>
 
-              {cartItems.length > 0 ? (
+              {cart && cart.items.length > 0 ? (
                 <div>
-                  {cartItems.map((item) => (
+                  {cart.items.map((item) => (
                     <div key={item.id} className="p-4 border-b flex items-center">
                       <div className="flex-shrink-0">
                         <Image
-                          src={item.image || "/placeholder.svg"}
-                          alt={item.name}
+                          src={`${BaseURL.baseImage}${item.image}` || '/placeholder.svg'}
+                          alt={item.fruitName}
                           width={80}
                           height={80}
                           className="rounded-md"
                         />
                       </div>
                       <div className="ml-4 flex-grow">
-                        <h3 className="font-medium">{item.name}</h3>
-                        <p className="text-[#269300] font-semibold mt-1">{formatPrice(item.price)}</p>
+                        <h3 className="font-medium">{item.fruitName}</h3>
+                        <p className="text-[#269300] font-semibold mt-1">{formatPrice(item.fruitPrice)}</p>
+                        <p className="text-gray-500 text-sm">{item.fruitCategory}</p>
                       </div>
                       <div className="flex items-center border rounded-md">
                         <button
-                          className="p-2 hover:bg-gray-100"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          className="p-2 hover:bg-gray-100 disabled:opacity-50"
+                          onClick={() => handleMinusItem(item.fruitId)}
+                          disabled={loading}
                         >
                           <Minus size={16} />
                         </button>
                         <span className="px-3">{item.quantity}</span>
                         <button
-                          className="p-2 hover:bg-gray-100"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          className="p-2 hover:bg-gray-100 disabled:opacity-50"
+                          onClick={() => handlePlusItem(item.fruitId)}
+                          disabled={loading}
                         >
                           <Plus size={16} />
                         </button>
                       </div>
                       <div className="ml-4 text-right">
-                        <p className="font-semibold">{formatPrice(item.price * item.quantity)}</p>
+                        <p className="font-semibold">{formatPrice(item.fruitPrice * item.quantity)}</p>
                         <button
-                          className="text-red-500 mt-2 flex items-center text-sm hover:underline"
-                          onClick={() => removeItem(item.id)}
+                          className="text-red-500 mt-2 flex items-center text-sm hover:underline disabled:opacity-50"
+                          onClick={() => handleRemoveItem(item.fruitId)}
+                          disabled={loading}
                         >
                           <Trash2 size={14} className="mr-1" />
                           Xóa
@@ -127,8 +124,8 @@ export default function CartPage() {
                 <div className="p-8 text-center">
                   <p className="text-gray-500">Giỏ hàng của bạn đang trống</p>
                   <Link
-                    href="/san-pham"
-                    className="mt-4 inline-block bg-[#269300] text-white px-4 py-2 rounded-md hover:bg-[#328615]"
+                    href="/fruits"
+                    className="mt-4 inline-block bg-[#269300] text-white px-4 py-2 rounded-md hover:bg-[#1e7a00]"
                   >
                     Tiếp tục mua sắm
                   </Link>
@@ -136,7 +133,7 @@ export default function CartPage() {
               )}
 
               <div className="p-4 bg-gray-50 flex justify-between">
-                <Link href="/san-pham" className="text-[#269300] hover:underline flex items-center">
+                <Link href="/fruits" className="text-[#269300] hover:underline flex items-center">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-4 w-4 mr-1"
@@ -154,9 +151,9 @@ export default function CartPage() {
                   Tiếp tục mua sắm
                 </Link>
                 <button
-                  className="text-red-500 hover:underline flex items-center"
-                  onClick={clearCart}
-                  disabled={cartItems.length === 0}
+                  className="text-red-500 hover:underline flex items-center disabled:opacity-50"
+                  onClick={handleClearCart}
+                  disabled={loading || !cart || cart.items.length === 0}
                 >
                   <Trash2 size={16} className="mr-1" />
                   Xóa tất cả
@@ -186,10 +183,11 @@ export default function CartPage() {
                 </div>
 
                 <button
-                  className="w-full bg-[#269300] text-white py-3 rounded-md hover:bg-[#328615] transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={cartItems.length === 0}
+                  className="w-full bg-[#269300] text-white py-3 rounded-md hover:bg-[#1e7a00] transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleCheckout}
+                  disabled={loading || !cart || cart.items.length === 0}
                 >
-                  Tiến hành thanh toán
+                  {loading ? 'Đang xử lý...' : 'Tiến hành thanh toán'}
                 </button>
 
                 <div className="mt-4">
@@ -220,13 +218,16 @@ export default function CartPage() {
                   placeholder="Nhập mã giảm giá"
                   className="flex-grow border rounded-l-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#269300]"
                 />
-                <button className="bg-[#269300] text-white px-4 py-2 rounded-r-md hover:bg-[#328615]">Áp dụng</button>
+                <button className="bg-[#269300] text-white px-4 py-2 rounded-r-md hover:bg-[#1e7a00]">
+                  Áp dụng
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
+export default CartPage;
